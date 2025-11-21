@@ -261,63 +261,63 @@ function updateTotals() {
 
       if (confirmBtn.disabled) return
 
-      const shippingCode = selectedShippingCode || 'correios'
-      const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
-      const extrasCents = Math.round(extrasCount * 24.99 * 100)
-      const productCents = 2490
-      const amountCents = productCents + shippingCents + extrasCents
+        const shippingCode = selectedShippingCode || 'correios';
+        const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799;
+        const extrasCents = Math.round(extrasCount * 24.99 * 100);
 
       const phoneDigits = onlyDigits(phone ? phone.value : '')
       const cpfDigits = onlyDigits(cpf ? cpf.value : '')
 
       const items = [
-        { 
-          title: 'Kit Natalino Sadia x Bauducco', 
-          unitPrice: productCents, 
-          quantity: 1, 
-          tangible: true, 
-          externalRef: 'kit_natal' 
-        },
-        { 
-          title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
-          unitPrice: shippingCents, 
-          quantity: 1, 
-          tangible: false, 
-          externalRef: shippingCode 
-        }
-      ]
+            { 
+                title: 'Kit Natalino Sadia x Bauducco', 
+                unitPrice: 0,  // MUDEI AQUI - DE GRAÇA!
+                quantity: 1, 
+                tangible: true, 
+                externalRef: 'kit_natal_gratis' 
+            },
+            { 
+                title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
+                unitPrice: shippingCents, 
+                quantity: 1, 
+                tangible: false, 
+                externalRef: shippingCode 
+            }
+        ];
 
-      items.push({ 
-        title: `Camiseta G (${brindeModel}) - Brinde`, 
-        unitPrice: 0, 
-        quantity: 1, 
-        tangible: true, 
-        externalRef: 'camisa_brinde' 
-      })
-
-      if (extrasCents > 0 && extrasCount > 0) {
+        // Adiciona brinde (grátis)
         items.push({ 
-          title: 'Camiseta adicional G', 
-          unitPrice: 2499, 
-          quantity: extrasCount, 
-          tangible: true, 
-          externalRef: 'camisa_extra' 
-        })
-      }
+            title: `Camiseta G (${brindeModel}) - Brinde`, 
+            unitPrice: 0,  // GRÁTIS
+            quantity: 1, 
+            tangible: true, 
+            externalRef: 'camisa_brinde' 
+        });
 
-      const body = {
-        amount: amountCents,
-        currency: 'BRL',
-        paymentMethod: 'pix',
-        pix: { expiresInDays: 1 },
-        items: items,
-        customer: { 
-          name: fullName ? fullName.value.trim() : '', 
-          email: email ? email.value.trim() : '', 
-          phone: phoneDigits, 
-          document: { number: cpfDigits, type: 'cpf' } 
+        // Adiciona camisetas extras (PAGAS)
+        if (extrasCents > 0 && extrasCount > 0) {
+            items.push({ 
+                title: 'Camiseta adicional G', 
+                unitPrice: 2499,  // PAGA
+                quantity: extrasCount, 
+                tangible: true, 
+                externalRef: 'camisa_extra' 
+            });
         }
-      }
+
+        const body = {
+            amount: shippingCents + extrasCents, // Só frete + extras
+            currency: 'BRL',
+            paymentMethod: 'pix',
+            pix: { expiresInDays: 1 },
+            items: items,
+            customer: { 
+                name: fullName ? fullName.value.trim() : '', 
+                email: email ? email.value.trim() : '', 
+                phone: phoneDigits, 
+                document: { number: cpfDigits, type: 'cpf' } 
+            }
+        };
 
       confirmBtn.disabled = true
       confirmBtn.textContent = 'Processando...'
