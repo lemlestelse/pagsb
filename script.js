@@ -1,6 +1,6 @@
 const startBtn = document.getElementById('start-btn')
 const checkout = document.getElementById('checkout')
-const API_BASE = window.API_BASE || 'https://backend-production-3b17.up.railway.app/'
+const API_BASE = window.API_BASE || 'https://backend-production-760e.up.railway.app/'
 const quiz = document.getElementById('quiz')
 
 if (startBtn) {
