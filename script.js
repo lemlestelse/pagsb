@@ -52,17 +52,18 @@ function setupCheckout() {
   let brindeModel = 'camisa1'
   const subtotal = 24.90
 
-  function updateTotals() {
-    const extras = extrasCount * extrasUnit
-    const total = subtotal + shipping + extras
+function updateTotals() {
+    const subtotal = 0; 
+    const extras = extrasCount * extrasUnit;
+    const total = subtotal + shipping + extras;
     
-    if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal)
-    if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping)
-    if (extrasEl) extrasEl.textContent = formatCurrencyBRL(extras)
-    if (extrasLine) extrasLine.style.display = extras > 0 ? '' : 'none'
-    if (shippingLine) shippingLine.style.display = shipping > 0 ? '' : 'none'
-    if (totalEl) totalEl.textContent = formatCurrencyBRL(total)
-  }
+    if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal);
+    if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping);
+    if (extrasEl) extrasEl.textContent = formatCurrencyBRL(extras);
+    if (extrasLine) extrasLine.style.display = extras > 0 ? '' : 'none';
+    if (shippingLine) shippingLine.style.display = shipping > 0 ? '' : 'none';
+    if (totalEl) totalEl.textContent = formatCurrencyBRL(total);
+}
 
   function onlyDigits(s) { return (s || '').replace(/\D/g,'') }
   
