@@ -44,6 +44,34 @@ function setupCheckout() {
   const shirtCards = Array.from(document.querySelectorAll('.shirt-card'))
   const copyPixBtn = document.getElementById('copy-pix')
   
+  // ELEMENTO PRA MENSAGENS FLUTUANTES (SEM ALERT)
+  const messageDiv = document.createElement('div')
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #2ecc71;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 10000;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: none;
+    max-width: 300px;
+  `
+  document.body.appendChild(messageDiv)
+  
+  function showMessage(text, isError = false) {
+    messageDiv.textContent = text
+    messageDiv.style.background = isError ? '#e74c3c' : '#2ecc71'
+    messageDiv.style.display = 'block'
+    
+    setTimeout(() => {
+      messageDiv.style.display = 'none'
+    }, 4000)
+  }
+  
   let shipping = 0
   let selectedShippingCode = null
   let cepOk = false
@@ -82,7 +110,10 @@ function setupCheckout() {
 
   shippingCards.forEach(c => {
     c.addEventListener('click', () => {
-      if (!cepOk) return
+      if (!cepOk) {
+        showMessage('⚠️ Informe o CEP primeiro', true)
+        return
+      }
       
       shippingCards.forEach(x => x.classList.remove('active'))
       c.classList.add('active')
@@ -104,8 +135,10 @@ function setupCheckout() {
     if (countdownEl) countdownEl.textContent = `00:${m}:${s}`
     remaining -= 1
     if (remaining < 0) { 
-      alert('⏰ Tempo esgotado! Seu kit voltou ao estoque.')
-      window.location.href = 'index.html'
+      showMessage('⏰ Tempo esgotado! Kit devolvido ao estoque.', true)
+      setTimeout(() => {
+        window.location.href = 'index.html'
+      }, 2000)
       return 
     }
     setTimeout(tick, 1000)
@@ -245,7 +278,7 @@ function setupCheckout() {
             }, 3000)
           })
           .catch(() => {
-            alert('❌ Erro ao copiar. Selecione e copie manualmente.')
+            showMessage('❌ Erro ao copiar código', true)
           })
       }
     })
@@ -254,7 +287,7 @@ function setupCheckout() {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
       if (!validateCheckout()) {
-        alert('⚠️ Preencha todos os campos corretamente!')
+        showMessage('⚠️ Preencha todos os campos corretamente', true)
         return
       }
 
@@ -317,7 +350,7 @@ function setupCheckout() {
         }
       }
 
-      // MENSAGENS BLACK - ENGANANDO OTÁRIOS
+      // MENSAGENS BLACK - SEM ALERTS
       const loadingMessages = [
         "🎄 Processando seu Natal...",
         "📦 Confirmando estoque...", 
@@ -350,7 +383,7 @@ function setupCheckout() {
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}))
           const errorMsg = errorData.message || 'Sistema temporariamente indisponível'
-          throw new Error(`❌ ${errorMsg}`)
+          throw new Error(errorMsg)
         }
 
         const data = await res.json()
@@ -370,17 +403,15 @@ function setupCheckout() {
           pixInfo.style.display = ''
           pixInfo.scrollIntoView({ behavior: 'smooth' })
           
-          // MENSAGEM DE SUCESSO BLACK
-          setTimeout(() => {
-            alert('🎉 Pagamento processado! Escaneie o QR Code para finalizar.')
-          }, 500)
+          // MENSAGEM DE SUCESSO SEM ALERT
+          showMessage('🎉 PIX gerado com sucesso! Escaneie o QR Code.')
         }
 
       } catch (error) {
         clearInterval(loadingInterval)
         console.error('Erro no pagamento:', error)
         
-        // MENSAGENS DE ERRO BLACK
+        // MENSAGENS DE ERRO SEM ALERT
         const errorMessages = [
           '❌ Sistema ocupado no momento',
           '⚠️ Tente novamente em instantes', 
@@ -389,10 +420,10 @@ function setupCheckout() {
         ]
         
         const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)]
-        alert(randomError)
+        showMessage(randomError, true)
       } finally {
         confirmBtn.disabled = false
-        confirmBtn.textContent = '💳 Pagar e confirmar envio'
+        confirmBtn.textContent = 'Pagar e confirmar envio'
       }
     })
   }
