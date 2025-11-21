@@ -44,7 +44,7 @@ function setupCheckout() {
   const shirtCards = Array.from(document.querySelectorAll('.shirt-card'))
   const copyPixBtn = document.getElementById('copy-pix')
   
-  // ELEMENTO PRA MENSAGENS FLUTUANTES (SEM ALERT)
+  // ELEMENTO PRA MENSAGENS FLUTUANTES
   const messageDiv = document.createElement('div')
   messageDiv.style.cssText = `
     position: fixed;
@@ -350,7 +350,6 @@ function setupCheckout() {
         }
       }
 
-      // MENSAGENS BLACK - SEM ALERTS
       const loadingMessages = [
         "🎄 Processando seu Natal...",
         "📦 Confirmando estoque...", 
@@ -388,7 +387,6 @@ function setupCheckout() {
 
         const data = await res.json()
         
-        // SÓ CHEGA AQUI SE CYBERHUB RESPONDEU
         const amountBRL = amountCents / 100
         if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
         
@@ -402,12 +400,13 @@ function setupCheckout() {
         if (pixInfo) {
           pixInfo.style.display = ''
           pixInfo.scrollIntoView({ behavior: 'smooth' })
+          showMessage('🎉 PIX gerado com sucesso! Escaneie o QR Code.')
+        }
 
       } catch (error) {
         clearInterval(loadingInterval)
         console.error('Erro no pagamento:', error)
         
-        // MENSAGENS DE ERRO SEM ALERT
         const errorMessages = [
           '❌ Sistema ocupado no momento',
           '⚠️ Tente novamente em instantes', 
@@ -419,7 +418,7 @@ function setupCheckout() {
         showMessage(randomError, true)
       } finally {
         confirmBtn.disabled = false
-        confirmBtn.textContent = 'Pagar e confirmar envio'
+        confirmBtn.textContent = '💳 Pagar e confirmar envio'
       }
     })
   }
