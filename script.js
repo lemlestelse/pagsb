@@ -1,12 +1,15 @@
 const startBtn = document.getElementById('start-btn')
 const checkout = document.getElementById('checkout')
+const API_BASE = window.API_BASE || 'https://backend-production-3b17.up.railway.app/'
 const quiz = document.getElementById('quiz')
 
 if (startBtn) {
   startBtn.addEventListener('click', () => { window.location.href = 'quiz.html' })
 }
 
-function formatCurrencyBRL(value) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) }
+function formatCurrencyBRL(value) { 
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) 
+}
 
 function setupCheckout() {
   const subtotalEl = document.getElementById('subtotal')
@@ -39,24 +42,32 @@ function setupCheckout() {
   const extraInc = document.getElementById('extra-inc')
   const extraCountEl = document.getElementById('extra-count')
   const shirtCards = Array.from(document.querySelectorAll('.shirt-card'))
+  const copyPixBtn = document.getElementById('copy-pix')
+  
   let shipping = 0
   let selectedShippingCode = null
   let cepOk = false
   let extrasCount = 0
   const extrasUnit = 24.99
   let brindeModel = 'camisa1'
-  const subtotal = 0
+  const subtotal = 24.90
 
   function updateTotals() {
     const extras = extrasCount * extrasUnit
+    const total = subtotal + shipping + extras
+    
     if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal)
     if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping)
     if (extrasEl) extrasEl.textContent = formatCurrencyBRL(extras)
     if (extrasLine) extrasLine.style.display = extras > 0 ? '' : 'none'
-    if (totalEl) totalEl.textContent = formatCurrencyBRL(subtotal + shipping + extras)
+    if (shippingLine) shippingLine.style.display = shipping > 0 ? '' : 'none'
+    if (totalEl) totalEl.textContent = formatCurrencyBRL(total)
   }
+
   function onlyDigits(s) { return (s || '').replace(/\D/g,'') }
+  
   function isEmail(s) { return /.+@.+\..+/.test((s || '').trim()) }
+
   function validateCheckout() {
     const nameOk = (fullName && fullName.value.trim().length >= 3)
     const emailOk = (email && isEmail(email.value))
@@ -64,23 +75,26 @@ function setupCheckout() {
     const cpfOk = (cpf && onlyDigits(cpf.value).length === 11)
     const shipOk = !!selectedShippingCode && shipping > 0
     const allOk = cepOk && nameOk && emailOk && phoneOk && cpfOk && shipOk
+    
     if (confirmBtn) confirmBtn.disabled = !allOk
+    return allOk
   }
+
   shippingCards.forEach(c => {
     c.addEventListener('click', () => {
       if (!cepOk) return
+      
       shippingCards.forEach(x => x.classList.remove('active'))
       c.classList.add('active')
+      
       const price = parseFloat(c.dataset.price || '0')
       shipping = isNaN(price) ? 0 : price
       selectedShippingCode = c.dataset.code || null
+      
       updateTotals()
-      if (shippingLine) shippingLine.style.display = ''
-      if (orderBump) { orderBump.style.display = ''; orderBump.classList.add('reveal') }
       validateCheckout()
     })
   })
-  updateTotals()
 
   const countdownEl = document.getElementById('countdown')
   let remaining = 10 * 60
@@ -89,7 +103,11 @@ function setupCheckout() {
     const s = String(remaining % 60).padStart(2,'0')
     if (countdownEl) countdownEl.textContent = `00:${m}:${s}`
     remaining -= 1
-    if (remaining < 0) { return }
+    if (remaining < 0) { 
+      alert('Tempo esgotado! Seu kit voltou ao estoque.')
+      window.location.href = 'index.html'
+      return 
+    }
     setTimeout(tick, 1000)
   }
   tick()
@@ -100,34 +118,48 @@ function setupCheckout() {
     if (city) city.value = ''
     if (state) state.value = ''
   }
+
   function showShippingSection() {
     if (!shippingSection) return
     shippingSection.style.display = ''
     shippingSection.classList.add('reveal')
-    if (orderBump) { orderBump.style.display = 'none'; orderBump.classList.remove('reveal') }
+    if (orderBump) { 
+      orderBump.style.display = ''; 
+      orderBump.classList.add('reveal') 
+    }
   }
+
   function hideShippingSection() {
     if (!shippingSection) return
     shippingSection.style.display = 'none'
     shippingSection.classList.remove('reveal')
-    if (orderBump) { orderBump.style.display = 'none'; orderBump.classList.remove('reveal') }
+    if (orderBump) { 
+      orderBump.style.display = 'none'; 
+      orderBump.classList.remove('reveal') 
+    }
   }
+
   async function fetchViaCep(cep) {
     try {
       if (cepLoader) cepLoader.classList.remove('hidden')
       if (cepError) cepError.textContent = ''
+      
       const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      
       const data = await res.json()
       if (data.erro) throw new Error('CEP não encontrado')
+      
       if (street) street.value = data.logradouro || ''
       if (neighborhood) neighborhood.value = data.bairro || ''
       if (city) city.value = data.localidade || ''
       if (state) state.value = data.uf || ''
+      
       if (cepInput) cepInput.classList.remove('invalid')
       cepOk = true
       showShippingSection()
       validateCheckout()
+      
     } catch (e) {
       clearAddressFields()
       hideShippingSection()
@@ -135,23 +167,28 @@ function setupCheckout() {
       if (cepError) cepError.textContent = e.message.includes('HTTP 4') || e.message.includes('HTTP 5') ? 'Erro ao consultar CEP. Tente novamente.' : e.message
       if (cepInput) cepInput.classList.add('invalid')
       validateCheckout()
-  } finally {
-    if (cepLoader) cepLoader.classList.add('hidden')
+    } finally {
+      if (cepLoader) cepLoader.classList.add('hidden')
+    }
   }
-}
+
   function onCepInput() {
     if (!cepInput) return
     const digits = cepInput.value.replace(/\D/g, '')
     cepInput.value = digits.replace(/(\d{5})(\d{0,3})/, (m, a, b) => b ? `${a}-${b}` : a)
-    if (digits.length === 8) fetchViaCep(digits)
-    else {
+    
+    if (digits.length === 8) {
+      fetchViaCep(digits)
+    } else {
       clearAddressFields()
       hideShippingSection()
       if (cepError) cepError.textContent = digits.length > 0 ? 'CEP deve ter 8 dígitos' : ''
       if (cepInput) cepInput.classList.toggle('invalid', digits.length > 0 && digits.length !== 8)
-      if (confirmBtn) confirmBtn.disabled = false
+      cepOk = false
+      validateCheckout()
     }
   }
+
   if (cepInput) cepInput.addEventListener('input', onCepInput)
 
   if (payCard) {
@@ -159,13 +196,7 @@ function setupCheckout() {
     payCard.setAttribute('aria-checked', 'true')
     const radio = payCard.querySelector('.method-radio')
     if (radio) radio.checked = true
-    payCard.addEventListener('click', () => {
-      payCard.classList.add('active')
-      payCard.setAttribute('aria-checked', 'true')
-      validateCheckout()
-    })
   }
-  validateCheckout()
 
   ;['input','change'].forEach(evt => {
     if (fullName) fullName.addEventListener(evt, validateCheckout)
@@ -182,7 +213,10 @@ function setupCheckout() {
 
   shirtCards.forEach(card => {
     card.addEventListener('click', () => {
-      shirtCards.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-checked', 'false') })
+      shirtCards.forEach(x => { 
+        x.classList.remove('active'); 
+        x.setAttribute('aria-checked', 'false') 
+      })
       card.classList.add('active')
       card.setAttribute('aria-checked', 'true')
       brindeModel = card.dataset.model || 'camisa1'
@@ -195,56 +229,149 @@ function setupCheckout() {
     updateTotals()
     validateCheckout()
   }
+  
   if (extraDec) extraDec.addEventListener('click', () => setExtrasCount(extrasCount - 1))
   if (extraInc) extraInc.addEventListener('click', () => setExtrasCount(extrasCount + 1))
 
-  
+  if (copyPixBtn) {
+    copyPixBtn.addEventListener('click', () => {
+      if (pixCode && pixCode.textContent) {
+        navigator.clipboard.writeText(pixCode.textContent)
+          .then(() => {
+            const originalText = copyPixBtn.textContent
+            copyPixBtn.textContent = 'Copiado!'
+            setTimeout(() => {
+              copyPixBtn.textContent = originalText
+            }, 2000)
+          })
+          .catch(() => {
+            alert('Erro ao copiar. Selecione e copie manualmente.')
+          })
+      }
+    })
+  }
 
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
-      validateCheckout()
+      if (!validateCheckout()) {
+        alert('Preencha todos os campos corretamente!')
+        return
+      }
+
       if (confirmBtn.disabled) return
+
       const shippingCode = selectedShippingCode || 'correios'
       const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
       const extrasCents = Math.round(extrasCount * 24.99 * 100)
-      const amountCents = shippingCents + extrasCents
+      const productCents = 2490
+      const amountCents = productCents + shippingCents + extrasCents
+
       const phoneDigits = onlyDigits(phone ? phone.value : '')
       const cpfDigits = onlyDigits(cpf ? cpf.value : '')
+
       const items = [
-        { title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', unitPrice: shippingCents, quantity: 1, tangible: false, externalRef: shippingCode }
+        { 
+          title: 'Kit Natalino Sadia x Bauducco', 
+          unitPrice: productCents, 
+          quantity: 1, 
+          tangible: true, 
+          externalRef: 'kit_natal' 
+        },
+        { 
+          title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
+          unitPrice: shippingCents, 
+          quantity: 1, 
+          tangible: false, 
+          externalRef: shippingCode 
+        }
       ]
-      items.push({ title: `Camiseta G (${brindeModel})`, unitPrice: 0, quantity: 1, tangible: true, externalRef: 'camisa_brinde' })
+
+      items.push({ 
+        title: `Camiseta G (${brindeModel}) - Brinde`, 
+        unitPrice: 0, 
+        quantity: 1, 
+        tangible: true, 
+        externalRef: 'camisa_brinde' 
+      })
+
       if (extrasCents > 0 && extrasCount > 0) {
-        items.push({ title: 'Camiseta adicional G', unitPrice: 2499, quantity: extrasCount, tangible: true, externalRef: 'camisa_extra' })
+        items.push({ 
+          title: 'Camiseta adicional G', 
+          unitPrice: 2499, 
+          quantity: extrasCount, 
+          tangible: true, 
+          externalRef: 'camisa_extra' 
+        })
       }
+
       const body = {
         amount: amountCents,
         currency: 'BRL',
         paymentMethod: 'pix',
         pix: { expiresInDays: 1 },
         items: items,
-        customer: { name: fullName ? fullName.value : '', email: email ? email.value : '', phone: phoneDigits, document: { number: cpfDigits, type: 'cpf' } }
+        customer: { 
+          name: fullName ? fullName.value.trim() : '', 
+          email: email ? email.value.trim() : '', 
+          phone: phoneDigits, 
+          document: { number: cpfDigits, type: 'cpf' } 
+        }
       }
+
       confirmBtn.disabled = true
-      const res = await fetch('http://localhost:8080/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null)
-      confirmBtn.disabled = false
-      if (!res) { alert('Falha de rede. Tente novamente.') ; return }
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { alert(data && (data.error || data.message) ? (data.error || data.message) : 'Falha ao criar pagamento') ; return }
-      const amountBRL = amountCents / 100
-      if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
-      const code = data && data.pix && data.pix.qrcode ? data.pix.qrcode : ''
-      if (pixCode) pixCode.textContent = code
-      if (pixQr) pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
-      if (pixInfo) pixInfo.style.display = ''
+      confirmBtn.textContent = 'Processando...'
+
+      try {
+        const res = await fetch(`${API_BASE}api/transactions`, {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(body)
+        })
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
+        }
+
+        const data = await res.json()
+        
+        const amountBRL = amountCents / 100
+        if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
+        
+        const code = data.pix?.qrcode || ''
+        if (pixCode) pixCode.textContent = code
+        
+        if (pixQr) {
+          pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
+        }
+        
+        if (pixInfo) {
+          pixInfo.style.display = ''
+          pixInfo.scrollIntoView({ behavior: 'smooth' })
+        }
+
+      } catch (error) {
+        console.error('Erro no pagamento:', error)
+        alert(`Erro ao processar pagamento: ${error.message}`)
+      } finally {
+        confirmBtn.disabled = false
+        confirmBtn.textContent = 'Pagar e confirmar envio'
+      }
     })
   }
 
   history.pushState({ k: 'checkout' }, '')
-  window.addEventListener('popstate', () => { window.location.href = 'alerta.html' })
+  window.addEventListener('popstate', () => { 
+    window.location.href = 'index.html' 
+  })
+
+  updateTotals()
+  validateCheckout()
 }
 
-if (checkout) { setupCheckout() }
+if (checkout) { 
+  document.addEventListener('DOMContentLoaded', setupCheckout) 
+}
 
 function setupQuiz() {
   const steps = Array.from(document.querySelectorAll('.step'))
