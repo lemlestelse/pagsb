@@ -44,7 +44,6 @@ function setupCheckout() {
   const shirtCards = Array.from(document.querySelectorAll('.shirt-card'))
   const copyPixBtn = document.getElementById('copy-pix')
   
-  // ELEMENTO PRA MENSAGENS FLUTUANTES (SEM ALERT)
   const messageDiv = document.createElement('div')
   messageDiv.style.cssText = `
     position: fixed;
@@ -66,7 +65,6 @@ function setupCheckout() {
     messageDiv.textContent = text
     messageDiv.style.background = isError ? '#e74c3c' : '#2ecc71'
     messageDiv.style.display = 'block'
-    
     setTimeout(() => {
       messageDiv.style.display = 'none'
     }, 4000)
@@ -83,7 +81,6 @@ function setupCheckout() {
   function updateTotals() {
     const extras = extrasCount * extrasUnit
     const total = subtotal + shipping + extras
-    
     if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal)
     if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping)
     if (extrasEl) extrasEl.textContent = formatCurrencyBRL(extras)
@@ -103,7 +100,6 @@ function setupCheckout() {
     const cpfOk = (cpf && onlyDigits(cpf.value).length === 11)
     const shipOk = !!selectedShippingCode && shipping > 0
     const allOk = cepOk && nameOk && emailOk && phoneOk && cpfOk && shipOk
-    
     if (confirmBtn) confirmBtn.disabled = !allOk
     return allOk
   }
@@ -114,14 +110,11 @@ function setupCheckout() {
         showMessage('⚠️ Informe o CEP primeiro', true)
         return
       }
-      
       shippingCards.forEach(x => x.classList.remove('active'))
       c.classList.add('active')
-      
       const price = parseFloat(c.dataset.price || '0')
       shipping = isNaN(price) ? 0 : price
       selectedShippingCode = c.dataset.code || null
-      
       updateTotals()
       validateCheckout()
     })
@@ -176,23 +169,18 @@ function setupCheckout() {
     try {
       if (cepLoader) cepLoader.classList.remove('hidden')
       if (cepError) cepError.textContent = ''
-      
       const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      
       const data = await res.json()
       if (data.erro) throw new Error('CEP não encontrado')
-      
       if (street) street.value = data.logradouro || ''
       if (neighborhood) neighborhood.value = data.bairro || ''
       if (city) city.value = data.localidade || ''
       if (state) state.value = data.uf || ''
-      
       if (cepInput) cepInput.classList.remove('invalid')
       cepOk = true
       showShippingSection()
       validateCheckout()
-      
     } catch (e) {
       clearAddressFields()
       hideShippingSection()
@@ -209,7 +197,6 @@ function setupCheckout() {
     if (!cepInput) return
     const digits = cepInput.value.replace(/\D/g, '')
     cepInput.value = digits.replace(/(\d{5})(\d{0,3})/, (m, a, b) => b ? `${a}-${b}` : a)
-    
     if (digits.length === 8) {
       fetchViaCep(digits)
     } else {
@@ -290,7 +277,6 @@ function setupCheckout() {
         showMessage('⚠️ Preencha todos os campos corretamente', true)
         return
       }
-
       if (confirmBtn.disabled) return
 
       const shippingCode = selectedShippingCode || 'correios'
@@ -350,7 +336,6 @@ function setupCheckout() {
         }
       }
 
-      // MENSAGENS BLACK - SEM ALERTS
       const loadingMessages = [
         "🎄 Processando seu Natal...",
         "📦 Confirmando estoque...", 
@@ -387,38 +372,27 @@ function setupCheckout() {
         }
 
         const data = await res.json()
-        
-        // SÓ CHEGA AQUI SE CYBERHUB RESPONDEU
         const amountBRL = amountCents / 100
         if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
-        
         const code = data.pix?.qrcode || ''
         if (pixCode) pixCode.textContent = code
-        
         if (pixQr) {
           pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
         }
-        
         if (pixInfo) {
           pixInfo.style.display = ''
           pixInfo.scrollIntoView({ behavior: 'smooth' })
-          
-          // MENSAGEM DE SUCESSO SEM ALERT
           showMessage('🎉 PIX gerado com sucesso! Escaneie o QR Code.')
         }
-
       } catch (error) {
         clearInterval(loadingInterval)
         console.error('Erro no pagamento:', error)
-        
-        // MENSAGENS DE ERRO SEM ALERT
         const errorMessages = [
           '❌ Sistema ocupado no momento',
           '⚠️ Tente novamente em instantes', 
           '🔧 Estamos com muitos pedidos',
           '💸 Problema temporário no pagamento'
         ]
-        
         const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)]
         showMessage(randomError, true)
       } finally {
