@@ -379,6 +379,11 @@ function setupCheckout() {
         if (pixQr) {
           pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
         }
+
+          history.pushState({ k: 'checkout' }, '')
+  window.addEventListener('popstate', () => { window.location.href = 'alerta.html' })
+}
+        
         if (pixInfo) {
           pixInfo.style.display = ''
           pixInfo.scrollIntoView({ behavior: 'smooth' })
