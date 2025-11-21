@@ -251,118 +251,116 @@ function setupCheckout() {
     })
   }
 
-  if (confirmBtn) {
+ if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
-      if (!validateCheckout()) {
-        alert('Preencha todos os campos corretamente!')
-        return
-      }
-
-      if (confirmBtn.disabled) return
-
-      const shippingCode = selectedShippingCode || 'correios'
-      const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
-      const extrasCents = Math.round(extrasCount * 24.99 * 100)
-      
-      // CORREÇÃO: amountCents DEFINIDO CORRETAMENTE
-      const amountCents = shippingCents + extrasCents
-
-      const phoneDigits = onlyDigits(phone ? phone.value : '')
-      const cpfDigits = onlyDigits(cpf ? cpf.value : '')
-
-      // ITEMS ATUALIZADOS - PRODUTO GRÁTIS
-      const items = [
-        { 
-          title: 'Kit Natalino Sadia x Bauducco', 
-          unitPrice: 0,  // PRODUTO GRÁTIS
-          quantity: 1, 
-          tangible: true, 
-          externalRef: 'kit_natal_gratis' 
-        },
-        { 
-          title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
-          unitPrice: shippingCents, 
-          quantity: 1, 
-          tangible: false, 
-          externalRef: shippingCode 
+        if (!validateCheckout()) {
+            alert('Preencha todos os campos corretamente!')
+            return
         }
-      ]
 
-      // Brinde grátis
-      items.push({ 
-        title: `Camiseta G (${brindeModel}) - Brinde`, 
-        unitPrice: 0,  // GRÁTIS
-        quantity: 1, 
-        tangible: true, 
-        externalRef: 'camisa_brinde' 
-      })
+        if (confirmBtn.disabled) return
 
-      // Camisetas extras (pagas)
-      if (extrasCents > 0 && extrasCount > 0) {
+        const shippingCode = selectedShippingCode || 'correios'
+        const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
+        const extrasCents = Math.round(extrasCount * 24.99 * 100)
+        
+        // CORREÇÃO: DECLARA amountCents FORA DO TRY
+        const amountCents = shippingCents + extrasCents
+
+        const phoneDigits = onlyDigits(phone ? phone.value : '')
+        const cpfDigits = onlyDigits(cpf ? cpf.value : '')
+
+        const items = [
+            { 
+                title: 'Kit Natalino Sadia x Bauducco', 
+                unitPrice: 0,
+                quantity: 1, 
+                tangible: true, 
+                externalRef: 'kit_natal_gratis' 
+            },
+            { 
+                title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
+                unitPrice: shippingCents, 
+                quantity: 1, 
+                tangible: false, 
+                externalRef: shippingCode 
+            }
+        ]
+
         items.push({ 
-          title: 'Camiseta adicional G', 
-          unitPrice: 2499,  // PAGA
-          quantity: extrasCount, 
-          tangible: true, 
-          externalRef: 'camisa_extra' 
-        })
-      }
-
-      const body = {
-        amount: amountCents, // Só frete + extras
-        currency: 'BRL',
-        paymentMethod: 'pix',
-        pix: { expiresInDays: 1 },
-        items: items,
-        customer: { 
-          name: fullName ? fullName.value.trim() : '', 
-          email: email ? email.value.trim() : '', 
-          phone: phoneDigits, 
-          document: { number: cpfDigits, type: 'cpf' } 
-        }
-      }
-
-      confirmBtn.disabled = true
-      confirmBtn.textContent = 'Processando...'
-
-      try {
-        const res = await fetch(`${API_BASE}api/transactions`, {
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify(body)
+            title: `Camiseta G (${brindeModel}) - Brinde`, 
+            unitPrice: 0,
+            quantity: 1, 
+            tangible: true, 
+            externalRef: 'camisa_brinde' 
         })
 
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}))
-          throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
+        if (extrasCents > 0 && extrasCount > 0) {
+            items.push({ 
+                title: 'Camiseta adicional G', 
+                unitPrice: 2499,
+                quantity: extrasCount, 
+                tangible: true, 
+                external_ref: 'camisa_extra' 
+            })
         }
 
-        const data = await res.json()
-        
-        const amountBRL = amountCents / 100
-        if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
-        
-        const code = data.pix?.qrcode || ''
-        if (pixCode) pixCode.textContent = code
-        
-        if (pixQr) {
-          pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
-        }
-        
-        if (pixInfo) {
-          pixInfo.style.display = ''
-          pixInfo.scrollIntoView({ behavior: 'smooth' })
+        const body = {
+            amount: amountCents,
+            currency: 'BRL',
+            paymentMethod: 'pix',
+            pix: { expiresInDays: 1 },
+            items: items,
+            customer: { 
+                name: fullName ? fullName.value.trim() : '', 
+                email: email ? email.value.trim() : '', 
+                phone: phoneDigits, 
+                document: { number: cpfDigits, type: 'cpf' } 
+            }
         }
 
-      } catch (error) {
-        console.error('Erro no pagamento:', error)
-        alert(`Erro ao processar pagamento: ${error.message}`)
-      } finally {
-        confirmBtn.disabled = false
-        confirmBtn.textContent = 'Pagar e confirmar envio'
-      }
+        confirmBtn.disabled = true
+        confirmBtn.textContent = 'Processando...'
+
+        try {
+            const res = await fetch(`${API_BASE}api/transactions`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(body)
+            })
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}))
+                throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
+            }
+
+            const data = await res.json()
+            
+            // CORREÇÃO: amountBRL usa amountCents que já está definido
+            const amountBRL = amountCents / 100
+            if (pixAmountEl) pixAmountEl.textContent = formatCurrencyBRL(amountBRL)
+            
+            const code = data.pix?.qrcode || ''
+            if (pixCode) pixCode.textContent = code
+            
+            if (pixQr) {
+                pixQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}`
+            }
+            
+            if (pixInfo) {
+                pixInfo.style.display = ''
+                pixInfo.scrollIntoView({ behavior: 'smooth' })
+            }
+
+        } catch (error) {
+            console.error('Erro no pagamento:', error)
+            alert(`Erro ao processar pagamento: ${error.message}`)
+        } finally {
+            confirmBtn.disabled = false
+            confirmBtn.textContent = 'Pagar e confirmar envio'
+        }
     })
-  }
+}
 
   history.pushState({ k: 'checkout' }, '')
   window.addEventListener('popstate', () => { 
