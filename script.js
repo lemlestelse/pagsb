@@ -402,10 +402,6 @@ function setupCheckout() {
         if (pixInfo) {
           pixInfo.style.display = ''
           pixInfo.scrollIntoView({ behavior: 'smooth' })
-          
-          // MENSAGEM DE SUCESSO SEM ALERT
-          showMessage('🎉 PIX gerado com sucesso! Escaneie o QR Code.')
-        }
 
       } catch (error) {
         clearInterval(loadingInterval)
