@@ -50,20 +50,19 @@ function setupCheckout() {
   let extrasCount = 0
   const extrasUnit = 24.99
   let brindeModel = 'camisa1'
-  const subtotal = 24.90
+  const subtotal = 0 // PRODUTO É GRÁTIS
 
-function updateTotals() {
-    const subtotal = 0; 
-    const extras = extrasCount * extrasUnit;
-    const total = subtotal + shipping + extras;
+  function updateTotals() {
+    const extras = extrasCount * extrasUnit
+    const total = subtotal + shipping + extras // Só frete + extras
     
-    if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal);
-    if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping);
-    if (extrasEl) extrasEl.textContent = formatCurrencyBRL(extras);
-    if (extrasLine) extrasLine.style.display = extras > 0 ? '' : 'none';
-    if (shippingLine) shippingLine.style.display = shipping > 0 ? '' : 'none';
-    if (totalEl) totalEl.textContent = formatCurrencyBRL(total);
-}
+    if (subtotalEl) subtotalEl.textContent = formatCurrencyBRL(subtotal)
+    if (shippingEl) shippingEl.textContent = formatCurrencyBRL(shipping)
+    if (extrasEl) extrasEl.textContent = formatCurrencyBRL(extras)
+    if (extrasLine) extrasLine.style.display = extras > 0 ? '' : 'none'
+    if (shippingLine) shippingLine.style.display = shipping > 0 ? '' : 'none'
+    if (totalEl) totalEl.textContent = formatCurrencyBRL(total)
+  }
 
   function onlyDigits(s) { return (s || '').replace(/\D/g,'') }
   
@@ -261,63 +260,67 @@ function updateTotals() {
 
       if (confirmBtn.disabled) return
 
-        const shippingCode = selectedShippingCode || 'correios';
-        const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799;
-        const extrasCents = Math.round(extrasCount * 24.99 * 100);
+      const shippingCode = selectedShippingCode || 'correios'
+      const shippingCents = shippingCode === 'jadlog' ? 3499 : 3799
+      const extrasCents = Math.round(extrasCount * 24.99 * 100)
+      
+      // CORREÇÃO: amountCents DEFINIDO CORRETAMENTE
+      const amountCents = shippingCents + extrasCents
 
       const phoneDigits = onlyDigits(phone ? phone.value : '')
       const cpfDigits = onlyDigits(cpf ? cpf.value : '')
 
+      // ITEMS ATUALIZADOS - PRODUTO GRÁTIS
       const items = [
-            { 
-                title: 'Kit Natalino Sadia x Bauducco', 
-                unitPrice: 0,  // MUDEI AQUI - DE GRAÇA!
-                quantity: 1, 
-                tangible: true, 
-                externalRef: 'kit_natal_gratis' 
-            },
-            { 
-                title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
-                unitPrice: shippingCents, 
-                quantity: 1, 
-                tangible: false, 
-                externalRef: shippingCode 
-            }
-        ];
-
-        // Adiciona brinde (grátis)
-        items.push({ 
-            title: `Camiseta G (${brindeModel}) - Brinde`, 
-            unitPrice: 0,  // GRÁTIS
-            quantity: 1, 
-            tangible: true, 
-            externalRef: 'camisa_brinde' 
-        });
-
-        // Adiciona camisetas extras (PAGAS)
-        if (extrasCents > 0 && extrasCount > 0) {
-            items.push({ 
-                title: 'Camiseta adicional G', 
-                unitPrice: 2499,  // PAGA
-                quantity: extrasCount, 
-                tangible: true, 
-                externalRef: 'camisa_extra' 
-            });
+        { 
+          title: 'Kit Natalino Sadia x Bauducco', 
+          unitPrice: 0,  // PRODUTO GRÁTIS
+          quantity: 1, 
+          tangible: true, 
+          externalRef: 'kit_natal_gratis' 
+        },
+        { 
+          title: shippingCode === 'jadlog' ? 'Frete Jadlog' : 'Frete Correios', 
+          unitPrice: shippingCents, 
+          quantity: 1, 
+          tangible: false, 
+          externalRef: shippingCode 
         }
+      ]
 
-        const body = {
-            amount: shippingCents + extrasCents, // Só frete + extras
-            currency: 'BRL',
-            paymentMethod: 'pix',
-            pix: { expiresInDays: 1 },
-            items: items,
-            customer: { 
-                name: fullName ? fullName.value.trim() : '', 
-                email: email ? email.value.trim() : '', 
-                phone: phoneDigits, 
-                document: { number: cpfDigits, type: 'cpf' } 
-            }
-        };
+      // Brinde grátis
+      items.push({ 
+        title: `Camiseta G (${brindeModel}) - Brinde`, 
+        unitPrice: 0,  // GRÁTIS
+        quantity: 1, 
+        tangible: true, 
+        externalRef: 'camisa_brinde' 
+      })
+
+      // Camisetas extras (pagas)
+      if (extrasCents > 0 && extrasCount > 0) {
+        items.push({ 
+          title: 'Camiseta adicional G', 
+          unitPrice: 2499,  // PAGA
+          quantity: extrasCount, 
+          tangible: true, 
+          externalRef: 'camisa_extra' 
+        })
+      }
+
+      const body = {
+        amount: amountCents, // Só frete + extras
+        currency: 'BRL',
+        paymentMethod: 'pix',
+        pix: { expiresInDays: 1 },
+        items: items,
+        customer: { 
+          name: fullName ? fullName.value.trim() : '', 
+          email: email ? email.value.trim() : '', 
+          phone: phoneDigits, 
+          document: { number: cpfDigits, type: 'cpf' } 
+        }
+      }
 
       confirmBtn.disabled = true
       confirmBtn.textContent = 'Processando...'
