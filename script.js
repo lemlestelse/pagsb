@@ -397,7 +397,7 @@ function setupCheckout() {
         showMessage(randomError, true)
       } finally {
         confirmBtn.disabled = false
-        confirmBtn.textContent = '💳 Pagar e confirmar envio'
+        confirmBtn.textContent = 'Pagar e confirmar envio'
       }
     })
   }
